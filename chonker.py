@@ -35,8 +35,8 @@ def parse_args():
         "command invocation")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose "
         "logging.")
-    parser.add_argument("--chunk", type=filesize, default=1024, help="Chunk size in bytes.")
-    parser.add_argument("--bufsize", type=filesize, default=1024, help="Buffer "
+    parser.add_argument("--chunk", type=filesize, default="1K", help="Chunk size in bytes.")
+    parser.add_argument("--bufsize", type=filesize, default="1K", help="Buffer "
         "size for reading from stdin.")
     parser.add_argument("--exec", required=True, help="Command to pipe chunks to.")
     # parser.add_argument("--inc", help="Pattern to find/replace with the "
@@ -144,7 +144,8 @@ def pipe_chunk_to_command(command, chunk):
     Executes the given command, passing the chunk to its stdin via buf_size buffers.
     """
     logger = logging.getLogger(__name__)
-    logger.info(f"Piping chunk | {command}")
+    sys.stdout.buffer.write(f"Piping chunk | {command}\n".encode('utf8'))
+    sys.stdout.flush()
     child = spawn(command)
     child.logfile_read = sys.stdout.buffer
     for buf in chunk:
