@@ -11,6 +11,19 @@ import sys
 signal(SIGPIPE,SIG_DFL)
 
 
+def filesize(s):
+    try:
+        if s[-1].upper() == "K":
+            return int(s[:-1]) * 1024
+        elif s[-1].upper() == "M":
+            return int(s[:-1]) * 1024**2
+        elif s[-1].upper() == "G":
+            return int(s[:-1]) * 1024**3
+        return int(s)
+    except:
+        raise ArgumentTypeError(f"'{s}' is not a valid file size")
+
+
 def parse_args():
     """
     Helper function for argument parsing.
@@ -19,8 +32,8 @@ def parse_args():
         "command invocation")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose "
         "logging.")
-    parser.add_argument("--chunk", type=int, default=1024, help="Chunk size in bytes.")
-    parser.add_argument("--bufsize", type=int, default=1024, help="Buffer "
+    parser.add_argument("--chunk", type=filesize, default=1024, help="Chunk size in bytes.")
+    parser.add_argument("--bufsize", type=filesize, default=1024, help="Buffer "
         "size for reading from stdin.")
     parser.add_argument("--exec", required=True, help="Command to pipe chunks to.")
     # parser.add_argument("--inc", help="Pattern to find/replace with the "
