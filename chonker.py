@@ -1,10 +1,13 @@
 # Standard library imports
-from argparse import ArgumentParser, FileType
+from argparse import ArgumentParser, FileType, ArgumentTypeError
 import logging
-import shlex
 from signal import signal, SIGPIPE, SIG_DFL
 import subprocess
 import sys
+
+# Third party imports
+from pexpect import EOF
+from pexpect.popen_spawn import PopenSpawn as spawn
 
 
 # Configure SIGPIPE signal handler
@@ -142,17 +145,15 @@ def pipe_chunk_to_command(command, chunk):
     """
     logger = logging.getLogger(__name__)
     logger.info(f"Piping chunk | {command}")
-    out = b""
-    with subprocess.Popen(command,
-            stdin=subprocess.PIPE,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT) as process:
-        for buf in chunk:
-            outs, errs = process.communicate(input=buf)
-            out += outs
-    logger.info(out.decode('utf8'))
-    logger.debug(f"Process returned {process.returncode}")
-    return process
+    child = spawn(command)
+    child.logfile_read = sys.stdout.buffer
+    for buf in chunk:
+        child.send(buf)
+    child.sendeof()
+    child.expect(EOF)
+    retcode = child.wait()
+    logger.debug(f"Process returned {retcode}")
+    return retcode
 
 
 def main():
@@ -163,6 +164,7 @@ def main():
     args = parse_args()
 
     logger = initialize_logging(args.verbose)
+    logger.debug(args)
 
     # Skip chunks to get to the beginning of the operating section
     logger.debug(f"Skipping {args.skip} chunks")
@@ -173,4 +175,4 @@ def main():
     # Process each chunk in the section of the stream to operate on
     logger.debug("Reading chunks")
     for chunk in input_chunks(sys.stdin.buffer, args.chunk, args.bufsize):
-        pipe_chunk_to_command(shlex.split(args.exec), chunk)
+        pipe_chunk_to_command(args.exec, chunk)
